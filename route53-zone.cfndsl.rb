@@ -20,6 +20,7 @@ CloudFormation do
   extra_tags.each { |key,value| tags << { Key: key, Value: value } }
   dns_domain_default = FnSub('${EnvironmentName}.${RootDomainName}')
   dns_domain = external_parameters.fetch(:dns_domain, dns_domain_default)
+  custom_aws_region = external_parameters.fetch(:custom_aws_region, '')
   Route53_HostedZone('HostedZone') do
     Condition 'CreateZone'
     Name dns_domain
@@ -33,7 +34,13 @@ CloudFormation do
     Condition 'RemoteNSRecords'
     Type 'Custom::Route53ZoneNSRecords'
     Property 'ServiceToken',FnGetAtt('Route53ZoneCR','Arn')
-    Property 'AwsRegion', Ref('AWS::Region')
+
+    if !custom_aws_region.empty?
+      Property 'AwsRegion', custom_aws_region
+    else
+      Property 'AwsRegion', Ref('AWS::Region')
+    end
+    
     Property 'RootDomainName', Ref('RootDomainName')
     Property 'DomainName', dns_domain
     Property 'NSRecords', FnGetAtt('HostedZone', 'NameServers')
